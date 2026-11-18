@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Лабораторная работа №8</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Кнопка для открытия формы -->
+     <button id="openFormBtn">Связаться с нами</button>
+     <!-- Оверлей (затемнение фона) и сама форма -->
+      <div id="popupOverlay" class="overlay">
+        <div class="popup-content">
+            <button id="closeFormBtn" class="close-btn">&times;</button>
+            <form id="feedbackForm">
+                <h2>Обратная связь</h2>
+                <input type="text" name="name" placeholder="ФИО" required>
+                <input type="email" name="email" placeholder="Email" required>
+                <input type="tel" name="phone" placeholder="Телефон" required>
+                <input type="text" name="organization" placeholder="Организация">
+                <textarea name="message" placeholder="Сообщение" rows="3"></textarea>
+                <label class="checkbox-container">
+                    <input type="checkbox" name="consent" required>
+                    <span>Согласен с политикой обработки данных</span>
+                </label>
+                <button type="submit" id="submitBtn">Отправить</button>
+                <p id="statusMessage"></p>
+            </form>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
