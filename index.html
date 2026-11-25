@@ -3,29 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Лабораторная работа №8</title>
+    <title>Форма обратной связи</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- Кнопка для открытия формы -->
-     <button id="openFormBtn">Связаться с нами</button>
-     <!-- Оверлей (затемнение фона) и сама форма -->
-      <div id="popupOverlay" class="overlay">
-        <div class="popup-content">
-            <button id="closeFormBtn" class="close-btn">&times;</button>
-            <form id="feedbackForm">
+    <!-- Кнопка, которая открывает попап -->
+     <button id="openFormBtn" class="open-btn">Связаться с нами</button>
+     <!-- Попап с формой (поверх страницы) -->
+      <div id="modal" class="modal hidden">
+        <div class="modal-content">
+            <button id="closeFormBtn" class="close-btn" type="button">✕</button>
+            <form id="feedbackForm" novalidate>
                 <h2>Обратная связь</h2>
-                <input type="text" name="name" placeholder="ФИО" required>
-                <input type="email" name="email" placeholder="Email" required>
-                <input type="tel" name="phone" placeholder="Телефон" required>
-                <input type="text" name="organization" placeholder="Организация">
-                <textarea name="message" placeholder="Сообщение" rows="3"></textarea>
-                <label class="checkbox-container">
-                    <input type="checkbox" name="consent" required>
-                    <span>Согласен с политикой обработки данных</span>
+                <label for="fio">ФИО</label>
+                <input type="text" id="fio" name="fio" placeholder="Иванов Иван Иванович">
+                <label for="email">Email</label>
+                <input type="text" id="email" name="email" placeholder="you@mail.ru">
+                <label for="phone">Телефон</label>
+                <input type="tel" id="phone" name="phone" placeholder="79001234567">
+                <label for="org">Организация</label>
+                <input type="text" id="org" name="org" placeholder="Название организации">
+                <label for="message">Сообщение</label>
+                <textarea id="message" name="message" rows="3" placeholder="Ваше сообщение"></textarea>
+                <label class="checkbox-row">
+                    <input type="checkbox" id="agree" name="agree">
+                    <span>Согласен с политикой обработки персональных данных</span>
                 </label>
-                <button type="submit" id="submitBtn">Отправить</button>
-                <p id="statusMessage"></p>
+                <p id="formStatus" class="form-status"></p>
+                <button type="submit" class="submit-btn">Отправить</button>
             </form>
         </div>
     </div>
