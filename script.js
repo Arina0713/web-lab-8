@@ -1,115 +1,189 @@
-const FORMCARRY_ENDPOINT = 'https://formcarry.com/s/b0mU8hjHBf4';
-const STORAGE_KEY = 'feedbackFormData';
-const modal = document.getElementById('modal');
-const openBtn = document.getElementById('openFormBtn');
-const closeBtn = document.getElementById('closeFormBtn');
-const form = document.getElementById('feedbackForm');
-const statusEl = document.getElementById('formStatus');
-const fioInput = document.getElementById('fio');
-const emailInput = document.getElementById('email');
-const phoneInput = document.getElementById('phone');
-const agreeBox = document.getElementById('agree');
-const FIELDS = ['fio', 'email', 'phone', 'org', 'message'];
-function openModal() {
-    modal.classList.remove('hidden');
-    history.pushState({ form: true }, '', '#feedback');
-}
-function closeModal() {
-    modal.classList.add('hidden');
-}
-openBtn.addEventListener('click', openModal);
-closeBtn.addEventListener('click', () => history.back());
-popstate
-window.addEventListener('popstate', closeModal);
-fioInput.addEventListener('input', () => {
-    fioInput.value = fioInput.value.replace(/[^А-ЯЁа-яёA-Za-z\s-]/g, '');
-});
-phoneInput.addEventListener('input', () => {
-    phoneInput.value = phoneInput.value.replace(/\D/g, '');
-});
-function validate() {
-    const errors = [];
-    if (!fioInput.value.trim()) {
-        errors.push('Заполните ФИО');
-    } else if (fioInput.value.trim().split(/\s+/).length < 2) {
-        errors.push('В ФИО нужно минимум два слова');
-    }
-    const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-    if (!emailInput.value.trim()) {
-        errors.push('Заполните Email');
-    } else if (!emailRe.test(emailInput.value.trim())) {
-        errors.push('Некорректный Email');
-    }
-    if (!phoneInput.value.trim()) {
-        errors.push('Заполните телефон');
-    } else if (phoneInput.value.length < 10) {
-        errors.push('В телефоне должно быть минимум 10 цифр');
-    }
-    if (!document.getElementById('org').value.trim()) errors.push('Заполните организацию');
-    if (!document.getElementById('message').value.trim()) errors.push('Заполните сообщение');
-    if (!agreeBox.checked) errors.push('Нужно согласие на обработку данных');
-    return errors;
-}
-function saveToStorage() {
-    const data = {};
-    FIELDS.forEach(id => data[id] = document.getElementById(id).value);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-}
-function restoreFromStorage() {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (!saved) return;
+"use strict";
+
+const FORM_URL = "https://formcarry.com/s/b0mU8hjHBf4";
+const STORAGE_KEY = "feedbackFormValues";
+const FORM_HASH = "#feedback";
+const FIELD_NAMES = ["fio", "email", "phone", "organization", "message", "consent"];
+
+function readStorage() {
     try {
-        const data = JSON.parse(saved);
-        FIELDS.forEach(id => {
-            if (data[id] !== undefined) document.getElementById(id).value = data[id];
-        });
-        agreeBox.checked = data.agree === true;
-    } catch (e) { /* повреждённые данные игнорируем */ }
+        return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+    } catch (ignore) {
+        return {};
+    }
 }
+
+function writeStorage(values) {
+    try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(values));
+        return true;
+    } catch (ignore) {
+        return false;
+    }
+}
+
 function clearStorage() {
-    localStorage.removeItem(STORAGE_KEY);
-}
-form.addEventListener('input', saveToStorage);
-agreeBox.addEventListener('change', saveToStorage);
-restoreFromStorage();
-function showStatus(text, ok) {
-    statusEl.textContent = text;
-    statusEl.className = 'form-status ' + (ok ? 'ok' : 'err');
-}
-form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const errors = validate();
-    if (errors.length > 0) {
-        showStatus(errors[0], false);
-        return;
-    }
-    showStatus('Отправка...', true);
-    const data = {
-        fio: fioInput.value.trim(),
-        email: emailInput.value.trim(),
-        phone: phoneInput.value,
-        org: document.getElementById('org').value.trim(),
-        message: document.getElementById('message').value.trim()
-    };
     try {
-        const response = await fetch(FORMCARRY_ENDPOINT, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            },
-            body: JSON.stringify(data)
-        });
-        const result = await response.json();
-        if (result.code === 200) {
-            clearStorage(); 
-            form.reset();
-            showStatus('Сообщение отправлено!', true);
-            setTimeout(() => { history.back(); }, 1500);
-        } else {
-            showStatus('Ошибка сервера: ' + (result.message || 'попробуйте позже'), false);
-        }
-    } catch (err) {
-        showStatus('Ошибка сети. Проверьте интернет и попробуйте снова.', false);
+        localStorage.removeItem(STORAGE_KEY);
+        return true;
+    } catch (ignore) {
+        return false;
     }
-});
+}
+
+function init() {
+    const popup = document.getElementById("popup");
+    const openButton = document.getElementById("open-button");
+    const closeButton = document.getElementById("close-button");
+    const sendButton = document.getElementById("send-button");
+    const form = document.getElementById("feedback-form");
+    const statusBox = document.getElementById("status");
+    let lastFocused = null;
+
+    function showStatus(type, text) {
+        statusBox.textContent = text;
+        statusBox.className = "status " + type;
+        statusBox.hidden = text === "";
+    }
+
+    function saveValues() {
+        const values = {};
+        FIELD_NAMES.forEach(function (name) {
+            const field = form.elements[name];
+            if (field.type === "checkbox") {
+                values[name] = field.checked;
+            } else {
+                values[name] = field.value;
+            }
+        });
+        writeStorage(values);
+    }
+
+    function restoreValues() {
+        const values = readStorage();
+        FIELD_NAMES.forEach(function (name) {
+            const field = form.elements[name];
+            if (values[name] === undefined) {
+                return;
+            }
+            if (field.type === "checkbox") {
+                field.checked = values[name] === true;
+            } else {
+                field.value = String(values[name]);
+            }
+        });
+    }
+
+    function showPopup() {
+        if (!popup.hidden) {
+            return;
+        }
+        lastFocused = document.activeElement;
+        showStatus("", "");
+        popup.hidden = false;
+        document.body.classList.add("no-scroll");
+        form.elements.fio.focus();
+    }
+
+    function hidePopup() {
+        if (popup.hidden) {
+            return;
+        }
+        popup.hidden = true;
+        document.body.classList.remove("no-scroll");
+        if (lastFocused) {
+            lastFocused.focus();
+        }
+    }
+
+    function openForm() {
+        if (location.hash !== FORM_HASH) {
+            history.pushState({form: true}, "", FORM_HASH);
+        }
+        showPopup();
+    }
+
+    function closeForm() {
+        if (history.state && history.state.form) {
+            history.back();
+        } else {
+            history.replaceState(null, "", location.pathname + location.search);
+            hidePopup();
+        }
+    }
+
+    async function sendForm(event) {
+        event.preventDefault();
+        sendButton.disabled = true;
+        showStatus("info", "Отправка…");
+
+        const data = {
+            name: form.elements.fio.value.trim(),
+            email: form.elements.email.value.trim(),
+            phone: form.elements.phone.value.trim(),
+            organization: form.elements.organization.value.trim(),
+            message: form.elements.message.value.trim()
+        };
+
+        try {
+            const response = await fetch(FORM_URL, {
+                method: "POST",
+                headers: {
+                    "Accept": "application/json",
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(data)
+            });
+            const result = await response.json();
+
+            if (response.ok && result.status === "success") {
+                form.reset();
+                clearStorage();
+                showStatus("success", "Спасибо! Ваше сообщение успешно отправлено.");
+            } else {
+                showStatus(
+                    "error",
+                    "Не удалось отправить сообщение: " +
+                            (result.message || "ошибка сервера") + "."
+                );
+            }
+        } catch (ignore) {
+            showStatus("error", "Ошибка сети. Проверьте подключение и попробуйте ещё раз.");
+        }
+        sendButton.disabled = false;
+    }
+
+    openButton.addEventListener("click", openForm);
+    closeButton.addEventListener("click", closeForm);
+    form.addEventListener("submit", sendForm);
+    form.addEventListener("input", saveValues);
+    form.addEventListener("change", saveValues);
+
+    popup.addEventListener("click", function (event) {
+        if (event.target === popup) {
+            closeForm();
+        }
+    });
+
+    document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape" && !popup.hidden) {
+            closeForm();
+        }
+    });
+
+    window.addEventListener("popstate", function () {
+        if (location.hash === FORM_HASH) {
+            showPopup();
+        } else {
+            hidePopup();
+        }
+    });
+
+    restoreValues();
+
+    if (location.hash === FORM_HASH) {
+        showPopup();
+    }
+}
+
+document.addEventListener("DOMContentLoaded", init);
